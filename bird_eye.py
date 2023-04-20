@@ -26,7 +26,7 @@ seed = 4212
 IMG_WIDTH = 960
 IMG_HEIGHT = 540
 
-FIELD_LENGTH = 2800
+FIELD_LENGTH = 2700
 FIELD_WIDTH = 1500
 
 random.seed(seed)
@@ -319,9 +319,9 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
 #   My Code                                                               #
 ###############################################################################
     
-    # draw_courtline(npImg, sideline['sideline_top'])
-    # draw_courtline(npImg, sideline['sideline_bottom'])
-    # draw_courtline(npImg, sideline['sideline_left'])
+    draw_courtline(npImg, sideline['sideline_top'])
+    draw_courtline(npImg, sideline['sideline_bottom'])
+    draw_courtline(npImg, sideline['sideline_left'])
     # draw_courtline(npImg, sideline['sideline_right'])
     
 ###############################################################################
@@ -331,6 +331,7 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
     # drawCalibCourt(calib, npImg)
 
     if visualization:
+        npImg = cv2.cvtColor(npImg, cv2.COLOR_RGB2BGR)
         cv2.imshow("test", npImg)
         cv2.waitKey(1)
 
@@ -449,24 +450,19 @@ if __name__ == "__main__":
     
     tmp = inputPath
     i = 1
-    for i in range(180):
+    for i in range(170):
         inputPath = tmp
-        # inputPath += "img%d.png" % i
-        inputPath += "ezgif-frame-%d.jpg" % i
+        # inputPath += "%d.png" % i
+        inputPath += "ezgif-frame-%03d.jpg" % i
         # inputPath += "img1.jpg"
         print(inputPath)
         
         if os.path.isfile(inputPath):
             model, device = getModel(args.modelPath)
-            print("==============================================================")
-            # print(model)
             fieldPoints2d = getFieldPoints2d()
             fieldPoints3d = getFieldPoints()
-            print("==============================================================")
-            print("Finish field points")
             oriImg = cv2.imread(inputPath)
             oriImg = cv2.cvtColor(oriImg, cv2.COLOR_BGR2RGB)
-            print("==============================================================")
             drawTemplateFigure(fieldPoints2d)
             calib, sideline = estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, True)
             print(calib)
