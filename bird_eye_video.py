@@ -7,12 +7,9 @@ from model_resnet import makeModel
 import sys
 import os
 import argparse
-import glob
-import subprocess
 import random
 import time
 from tqdm import tqdm
-import imageio
 
 
 import cv2
@@ -21,7 +18,6 @@ import numpy as np
 import torchvision.transforms as transforms
 from deepsport_utilities.calib import Calib
 from calib3d.points import Point2D, Point3D
-from scipy.spatial.distance import cdist
 
 sys.path.append(".")
 
@@ -29,9 +25,9 @@ sys.path.append(".")
 #   Modified Parameters                                                       #
 ###############################################################################
 colormap = {
-    0: (255, 255, 255),
-    1: (0, 0, 255),
-    2: (255, 0, 0)
+    0: (0, 0, 255),      # home
+    1: (0, 122, 83),      # away
+    2: (255, 0, 0)       # referee
 }
 
 RESULT_DIR = 'results'
@@ -74,15 +70,19 @@ def drawTemplateFigure(fieldPoints):
         [0, 0, 1],
     ])
 
-    img = np.ones((int(FIELD_WIDTH * s + m * 2),
-                  int(FIELD_LENGTH * s + m * 2), 3), dtype=np.uint8)
-    drawField(img, H, (255, 0, 0), 5)
+    # Black background
+    # floor_texture = np.ones((int(FIELD_WIDTH * s + m * 2),
+    #               int(FIELD_LENGTH * s + m * 2), 3), dtype=np.uint8)
 
-    pointsToDraw = cv2.perspectiveTransform(fieldPoints, H)[0].astype(int)[:-2]
+    floor_texture = cv2.resize(cv2.imread(
+        args.floorTexturePath, cv2.IMREAD_COLOR), (740, 415))
+    drawField(floor_texture, H, (255, 255, 255), 4)
+
+    # pointsToDraw = cv2.perspectiveTransform(fieldPoints, H)[0].astype(int)[:-2]
     # for p in pointsToDraw:
     #     cv2.circle(img, (p[0], p[1]), 7, (0, 0, 255), -1)
 
-    return img
+    return floor_texture
 
 
 def drawField(img, H, color, thickness):
@@ -286,7 +286,7 @@ def do_homography(img, H, positions, labels, is_leftfield):
     return M, result
 
 
-def drawPlayer(positions, labels, M, is_leftfield, templateCourtImg):
+def drawPlayer(players_position_of_frames, players_position, labels, M, is_leftfield, templateCourtImg):
     s = 1/4  # scale
     m = 20  # margin
 
@@ -298,19 +298,28 @@ def drawPlayer(positions, labels, M, is_leftfield, templateCourtImg):
     y_ratio = (FIELD_WIDTH * s)/(FIELD_WIDTH / 5)
     x_ratio = (FIELD_LENGTH * s/2)/(FIELD_LENGTH / 5)
 
-    for i, xy in enumerate(positions):
+    for i, xy in enumerate(players_position):
         pos = np.array([xy[0], xy[1], 1])
         pos_homography = M @ pos
         pos_homography = pos_homography/pos_homography[2]
         pos_homography = (int(m+pos_homography[0]*x_ratio+rightfield_offset),
                           int(m+pos_homography[1]*y_ratio))
-        cv2.circle(templateCourtImg, pos_homography,
-                   3, colormap[int(labels[i])], -1)
+        # cv2.circle(templateCourtImg, pos_homography,
+        #            4, colormap[int(labels[i])], -1)
+        players_position_of_frames.append(pos_homography)
+
+    # draw history player trajectory
+
+    for i, xy in enumerate(players_position_of_frames):
+        cv2.circle(templateCourtImg, (xy[0], xy[1]),
+                   4, colormap[int(labels[i])], -1)
+
     templateCourtImg = cv2.cvtColor(templateCourtImg, cv2.COLOR_BGR2RGB)
 
     # cv2.imshow("template", templateCourtImg)
     # cv2.waitKey(1)
-    return templateCourtImg
+    return templateCourtImg, players_position_of_frames
+
 
 ###############################################################################
 #   End of Code                                                               #
@@ -335,7 +344,7 @@ def getModel(modelPath):
     return model, device
 
 
-def estimateCalib(model, device, fieldPoints2d, oriImg, visualization, positions, labels, is_leftfield, frame_name):
+def estimateCalib(model, device, fieldPoints2d, oriImg, visualization, positions, labels, is_leftfield):
     oriHeight, oriWidth = oriImg.shape[0:2]
     npImg = cv2.resize(oriImg, (IMG_WIDTH, IMG_HEIGHT))
 
@@ -351,10 +360,10 @@ def estimateCalib(model, device, fieldPoints2d, oriImg, visualization, positions
     with torch.no_grad():
         heatmaps = model(img)
 
-    return estimateCalibHM(heatmaps, npImg, fieldPoints2d, oriHeight, oriWidth, visualization, positions, labels, is_leftfield, frame_name)
+    return estimateCalibHM(heatmaps, npImg, fieldPoints2d, oriHeight, oriWidth, visualization, positions, labels, is_leftfield)
 
 
-def estimateCalibHM(heatmaps, npImg, fieldPoints2d, oriHeight, oriWidth, visualization, positions, labels, is_leftfield, frame_name):
+def estimateCalibHM(heatmaps, npImg, fieldPoints2d, oriHeight, oriWidth, visualization, positions, labels, is_leftfield):
 
     out = heatmaps[0].cpu().numpy()
     kpImg = out[-1].copy()
@@ -543,6 +552,8 @@ if __name__ == "__main__":
                         help="Input video path")
     parser.add_argument("--weightPath", default='yolov5/runs/train/exp2/weights/best.pt',
                         help="Weight path")
+    parser.add_argument("--floorTexturePath", default='input/floor_texture/wood.jpg',
+                        help="'wood', 'concrete' and 'blue_paint are available")
     args = parser.parse_args()
 
     model, device = getModel(args.modelPath)
@@ -609,9 +620,13 @@ if __name__ == "__main__":
         for j, player_xy in enumerate(players_position):
             players_position[j] = np.array([player_xy[0] * x_gain,
                                             player_xy[1] * y_gain])
+        # draw points on the calibration map
+        is_leftfield = True
+        calib, M, is_leftfield, result = estimateCalib(model, device, fieldPoints2d, oriImg,
+                                                       True, players_position, labels,
+                                                       is_leftfield)
 
         # Store n frames of players data, and thus will have a motion effect
-        players_position_of_frames += players_position
         labels_of_frames += labels
         if frame_idx >= FRAME_OF_MOTION and frame_idx != 0:
             frame_count = frame_count_list[0]
@@ -624,23 +639,23 @@ if __name__ == "__main__":
         elif frame_idx < FRAME_OF_MOTION:
             frame_count_list.append(len(players_position))
 
-        # draw points on the calibration map
-        is_leftfield = True
-        calib, M, is_leftfield, result = estimateCalib(
-            model, device, fieldPoints2d, oriImg, True, players_position, labels, is_leftfield, str(frame_idx))
-
         # Draw on the board image
-        templateCourtImg = drawTemplateFigure(fieldPoints2d)
+        templateCourtImg = drawTemplateFigure(fieldPoints2d)  # no player court
+        templateCourtImg = cv2.cvtColor(templateCourtImg, cv2.COLOR_BGR2RGB)
 
-        template = drawPlayer(players_position_of_frames, labels_of_frames,
-                              M, is_leftfield, templateCourtImg)
-
+        BirdEyeCourtImg, players_position_of_frames = drawPlayer(players_position_of_frames,
+                                                                 players_position,
+                                                                 labels_of_frames, M,
+                                                                 is_leftfield, templateCourtImg)
         # Output and save the result
-        board_out.write(template)
+        board_out.write(BirdEyeCourtImg)
         homo_out.write(result)
 
     board_out.release()
     homo_out.release()
 
     elapsed_time = time.time() - start_time
+    print("Result: ")
+    print("   board saved in:      ", output_board_path)
+    print("   homography saved in: ", output_homography_path)
     print(f"Run time: {elapsed_time} seconds")
