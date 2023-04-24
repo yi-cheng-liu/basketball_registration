@@ -1,6 +1,4 @@
 deepsport-utilities >= 4.0.9
-torch
-torchvision
 tqdm
 yacs
 pytorch-ignite
@@ -23,7 +21,6 @@ tqdm>=4.64.0
 # Yolo plotting --------------------------------------------------------------------
 pandas>=1.1.4
 seaborn>=0.11.0
-
 
 # FairMOT ---------------------------------------------------------------------
 cython

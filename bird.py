@@ -20,27 +20,23 @@ sys.path.append(".")
 from model_resnet import makeModel
 from data.datasets.viewds import getFieldPoints
 from modeling.example_camera_model import compute_camera_model, MEAN_H
-
-###############################################################################
-#   My Function                                                               #
-###############################################################################
+#################################################
 from yolov5.detect import run
-colormap={
-    0: (0, 0, 0),    # 0 = home
-    1: (255, 0, 0),  # 1 = away
-    2: (0, 255, 0),  # 2 = referee
-}
-
-###############################################################################
-#   End of My Function                                                        #
-###############################################################################
-
+colormap = {
+        0:(255,255,255),
+        1:(0,0,255),
+        2:(255,0,0) 
+    }
+RESULT_DIR='results'	
+BOARD_DIR='boards'	
+HOMO_DIR='homographies'	
+#################################################
 seed = 4212
 
 IMG_WIDTH = 960
 IMG_HEIGHT = 540
 
-FIELD_LENGTH = 2700
+FIELD_LENGTH = 2800
 FIELD_WIDTH = 1500
 
 random.seed(seed)
@@ -50,20 +46,13 @@ torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
 
+
 def getFieldPoints2d():
     points = np.expand_dims(getFieldPoints()[:,0:2], axis=0)
     return points
 
 
 def drawField(img, H, color, thickness):
-
-    ###############################################################################
-    #   My Function                                                               #
-    ###############################################################################
-
-    ###############################################################################
-    #   End of My Function                                                        #
-    ###############################################################################
     mulCoefs = [[1, 1],
                 [1, -1],
                 [-1, -1],
@@ -72,9 +61,11 @@ def drawField(img, H, color, thickness):
                       [0, FIELD_WIDTH],
                       [FIELD_LENGTH, FIELD_WIDTH],
                       [FIELD_LENGTH, 0]]
-
+    
     for mulCoef, translateCoef in zip(mulCoefs, translateCoefs):
         drawQuarterField(img, H, color, thickness, mulCoef, translateCoef)
+        
+    return
 
 
 def drawQuarterField(img, H, color, thickness, mulCoef, translateCoef):
@@ -102,7 +93,9 @@ def drawQuarterField(img, H, color, thickness, mulCoef, translateCoef):
     
     # top and bottom line
     cv2.line(img, tuple(pointsToDraw[0]), tuple(pointsToDraw[1]), color, thickness)
+    #cv2.line(img, tuple(pointsToDraw[2]), tuple(pointsToDraw[1]), color, thickness)
     # sideline 
+    
     cv2.line(img, tuple(pointsToDraw[2]), tuple(pointsToDraw[0]), color, thickness)
     
     # middle box
@@ -118,6 +111,90 @@ def drawQuarterField(img, H, color, thickness, mulCoef, translateCoef):
     drawFieldCircle(img, H, mulCoef, translateCoef, color, thickness, np.array([157.5, FIELD_WIDTH / 2]), 675, 0, np.pi / 2 - 0.211)
     drawFieldCircle(img, H,  mulCoef, translateCoef, color, thickness, np.array([FIELD_LENGTH / 2, FIELD_WIDTH / 2]), 180, np.pi / 2, np.pi)
 
+#=======================================================
+def make_synthetic_view(img, corners, size):
+    h=size[0]
+    w=size[1]
+    
+    input_pts = np.float32(corners)
+    output_pts = np.float32([[0, 0],
+                            [w - 1,0],
+                            [w  - 1, h  - 1],
+                            [0, h  - 1]])
+    
+    M = cv2.getPerspectiveTransform(input_pts,output_pts)
+    out = cv2.warpPerspective(src=img,M=M,dsize=(int(w),int(h)))
+    return out, M
+
+def do_homography(img, H, positions, labels,is_leftfield,clip_path,frame_name ):	
+    # Identify the field and change the view
+    if is_leftfield:	
+        mulCoefs = [[1, 1],	
+                    [1, -1]]	
+        translateCoefs = [[0, 0],	
+                          [0, FIELD_WIDTH]]	
+    	
+    else:	
+        mulCoefs = [[-1, 1],	
+                    [-1, -1]]	
+        translateCoefs = [[FIELD_LENGTH, 0],	
+                          [FIELD_LENGTH, FIELD_WIDTH]]	
+        	
+    fieldPoints = np.float32([[	
+        [0, 0],	
+        [FIELD_LENGTH / 2, 0],	
+        [0, FIELD_WIDTH / 2],
+
+        [0, 505],	
+        [580, 505],	
+        [580, 750],	
+
+        [0, 90],	
+        [299, 90],	
+        [FIELD_LENGTH / 2, FIELD_WIDTH / 2],	
+    ]])	
+    	
+     	
+    topPoints = fieldPoints*mulCoefs[0]	
+    topPoints += translateCoefs[0]	
+    topPoints = cv2.perspectiveTransform(topPoints, H)[0].astype(int)	
+        	
+    	
+    botPoints = fieldPoints*mulCoefs[1]	
+    botPoints += translateCoefs[1]	
+    botPoints = cv2.perspectiveTransform(botPoints, H)[0].astype(int)	
+    	
+    if is_leftfield:	
+        corners=np.array([topPoints[0],topPoints[1],botPoints[1],botPoints[0]])	
+    else:	
+        corners=np.array([topPoints[1],topPoints[0],botPoints[0],botPoints[1]])	
+        	
+    size=(FIELD_WIDTH/5,FIELD_LENGTH/5)	
+    result, M = make_synthetic_view(img, corners, size)	
+    	
+    	
+    	
+    for i,xy in enumerate(positions):	
+        	
+        #point transformation	
+        p = np.array([xy[0],xy[1],1])	
+        p1 = M @ p	
+        p1 = p1 / p1[2]	
+        xy = (int(p1[0]),int(p1[1]))	
+        cv2.circle(result, xy, 1, colormap[int(labels[i])], 10)	
+    	
+    	
+    	
+    result=cv2.cvtColor(result, cv2.COLOR_BGR2RGB)	
+    cv2.imshow("board",result)	
+    	
+    write_path=os.path.join(RESULT_DIR, HOMO_DIR, frame_name)	
+        	
+    cv2.waitKey(1)	
+        	
+    return M,result
+    
+#=======================================================     
 
 def drawFieldCircle(img, H,  mulCoef, translateCoef,
         color, thickness, center, radius, startAngle, stopAngle):
@@ -140,7 +217,7 @@ def drawFieldCircle(img, H,  mulCoef, translateCoef,
         lastPoint = p
 
 
-def drawTemplateFigure(fieldPoints):
+def drawTemplateFigure(fieldPoints, player_position_3D, labels, M, is_leftfield, clip_path, frame_name):
     s = 1/4 #scale
     m = 20 #margin
 
@@ -149,15 +226,21 @@ def drawTemplateFigure(fieldPoints):
         [0, s, m],
         [0, 0, 1],
         ])
-
+    
+    
     img = np.ones((int(FIELD_WIDTH * s + m * 2), int(FIELD_LENGTH * s + m * 2), 3), dtype = np.uint8) * 255
-    drawField(img, H, (255, 0, 0), 5)
+    drawField(img, H, (255, 0, 0), 5, positions, labels)
+    for i, player in enumerate(player_position_3D):
+        cv2.circle(img, (int(player[1]), int(player[0])), 5, (0, 0, 255), -1)
 
+
+    # Heat 
     pointsToDraw = cv2.perspectiveTransform(fieldPoints, H)[0].astype(int)[:-2]
-    for p in pointsToDraw:
-        cv2.circle(img, (p[0], p[1]), 7, (0, 0, 255), -1)
+    # for p in pointsToDraw:
+    #     cv2.circle(img, (p[0], p[1]), 7, (0, 0, 255), -1)
 
-    # cv2.imshow("template", img)
+    img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+    cv2.imshow("template", img)
     cv2.waitKey(1)
 
 
@@ -201,7 +284,7 @@ def getModel(modelPath):
     return model, device
 
 
-def estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, visualization):
+def estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, visualization, player_position_3D, labels ):
     oriHeight, oriWidth = oriImg.shape[0:2]
     npImg = cv2.resize(oriImg, (IMG_WIDTH, IMG_HEIGHT))
 
@@ -217,10 +300,10 @@ def estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, visualiza
     with torch.no_grad():
         heatmaps = model(img)
 
-    return estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, oriWidth, visualization)
+    return estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, oriWidth, visualization, player_position_3D, labels)
 
 
-def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, oriWidth, visualization):
+def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, oriWidth, visualization, player_position_3D, labels ):
 
     out = heatmaps[0].cpu().numpy()
     kpImg = out[-1].copy()
@@ -265,8 +348,8 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
         p *= np.array([4, 4])
         pImg = [round(p[0]), round(p[1])]
         
-        cv2.circle(npImg, (pImg[1], pImg[0]), 3, (255, 0, 0), -1)
-        cv2.putText(npImg, str(i), (pImg[1], pImg[0] - 15), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
+        #cv2.circle(npImg, (pImg[1], pImg[0]), 3, (255, 0, 0), -1)
+        #cv2.putText(npImg, str(i), (pImg[1], pImg[0] - 15), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255))
         
         # print out the image with the points
         # print(i, ": ", pImg)
@@ -332,7 +415,11 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
 
     if Hest is not None:
         pass
-        drawField(npImg, Hest, (0, 0 , 255), 6)
+        drawField(npImg, Hest, (0, 0 , 255), 6 )
+        
+        do_homography(npImg, Hest, player_position_3D, labels )
+
+
     else:
         print("Default calib")
         
@@ -340,9 +427,9 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
 #   My Code                                                               #
 ###############################################################################
     
-    draw_courtline(npImg, sideline['sideline_top'])
-    draw_courtline(npImg, sideline['sideline_bottom'])
-    draw_courtline(npImg, sideline['sideline_left'])
+    #draw_courtline(npImg, sideline['sideline_top'])
+    # draw_courtline(npImg, sideline['sideline_bottom'])
+    # draw_courtline(npImg, sideline['sideline_left'])
     # draw_courtline(npImg, sideline['sideline_right'])
     
 ###############################################################################
@@ -352,7 +439,7 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, fieldPoints3d, oriHeight, or
     # drawCalibCourt(calib, npImg)
 
     if visualization:
-        npImg = cv2.cvtColor(npImg, cv2.COLOR_RGB2BGR)
+        npImg=cv2.cvtColor(npImg, cv2.COLOR_BGR2RGB)
         cv2.imshow("test", npImg)
         cv2.waitKey(1)
 
@@ -455,7 +542,7 @@ def draw_courtline(img, points):
     cv2.line(img, start_point, end_point, color, thickness)
 
 ###############################################################################
-#   End of My Function                                                        #
+#   End of My Function                                                               #
 ###############################################################################
 
 if __name__ == "__main__":
@@ -471,22 +558,46 @@ if __name__ == "__main__":
     
     tmp = inputPath
     i = 1
-    for i in range(170):
+    for i in range(180):
         inputPath = tmp
-        # inputPath += "%d.png" % i
+        # inputPath += "img%d.png" % i
         inputPath += "ezgif-frame-%03d.jpg" % i
         # inputPath += "img1.jpg"
         print(inputPath)
         
         if os.path.isfile(inputPath):
+            
+            
             model, device = getModel(args.modelPath)
             fieldPoints2d = getFieldPoints2d()
             fieldPoints3d = getFieldPoints()
             oriImg = cv2.imread(inputPath)
             oriImg = cv2.cvtColor(oriImg, cv2.COLOR_BGR2RGB)
-            drawTemplateFigure(fieldPoints2d)
-            calib, sideline = estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, True)
-            print(calib)
+            
+            
+            player_position_3D, labels=run(weights='yolov5/runs/train/exp/weights/best.pt',source=inputPath)
+            
+            print('oriImg',oriImg.shape)
+            # Draw on the original image
+            '''
+            for i,xy in enumerate(player_position_3D):
+                
+                xy=(int(xy[0]),int(xy[1]))
+                print("x: ", xy[0])
+                print("y: ", xy[1])
+                cv2.circle(oriImg, xy, 1, colormap[int(labels[i])], 50)
+            '''    
+            
+            # find the gain of the x and y
+            x_gain, y_gain = IMG_WIDTH/oriImg.shape[1], IMG_HEIGHT/oriImg.shape[0]
+            
+            for i,xy in enumerate(player_position_3D):
+                player_position_3D[i] = np.array([xy[0]*x_gain,xy[1]*y_gain])
+                print("After resize: ", (player_position_3D[i].astype(int)))
+
+            
+              
+            calib, sideline = estimateCalib(model, device, fieldPoints2d, fieldPoints3d, oriImg, True, player_position_3D, labels )            
             
             ###################################################################
             # My Code                                                         #
