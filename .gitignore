@@ -1,5 +1,6 @@
 
-input/
+input/video/
+input/image/
 results/
 __pycache__/
 .../__pycache__/

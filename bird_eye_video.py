@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 
 import cv2
+from cv2 import imshow
 import torch
 import numpy as np
 import torchvision.transforms as transforms
@@ -33,6 +34,7 @@ colormap = {
 RESULT_DIR = 'results'
 BOARD_DIR = 'boards'
 HOMOGRAPHY_DIR = 'homographies'
+ORIGINAL_DIR = 'original'
 
 FRAME_OF_MOTION = 15
 
@@ -298,26 +300,37 @@ def drawPlayer(players_position_of_frames, players_position, labels, M, is_leftf
     y_ratio = (FIELD_WIDTH * s)/(FIELD_WIDTH / 5)
     x_ratio = (FIELD_LENGTH * s/2)/(FIELD_LENGTH / 5)
 
+    newest_player_position = []
+
+    # Append the position after homography
     for i, xy in enumerate(players_position):
         pos = np.array([xy[0], xy[1], 1])
         pos_homography = M @ pos
         pos_homography = pos_homography/pos_homography[2]
         pos_homography = (int(m+pos_homography[0]*x_ratio+rightfield_offset),
                           int(m+pos_homography[1]*y_ratio))
-        # cv2.circle(templateCourtImg, pos_homography,
-        #            4, colormap[int(labels[i])], -1)
         players_position_of_frames.append(pos_homography)
+        newest_player_position.append(pos_homography)
 
     # draw history player trajectory
-
     for i, xy in enumerate(players_position_of_frames):
         cv2.circle(templateCourtImg, (xy[0], xy[1]),
                    4, colormap[int(labels[i])], -1)
 
+    # draw the newest player position
+    for i, xy in enumerate(newest_player_position):
+        pos_len = len(newest_player_position)
+        color = tuple(int(0.56 * c) for c in colormap[int(labels[-pos_len+i])])
+        cv2.circle(templateCourtImg, (xy[0], xy[1]), 4, color, -1)
+
+    # print(len(newest_player_position))
+    newest_player_position.clear()
+
     templateCourtImg = cv2.cvtColor(templateCourtImg, cv2.COLOR_BGR2RGB)
 
+    # Show the current frame
     # cv2.imshow("template", templateCourtImg)
-    # cv2.waitKey(1)
+    # cv2.waitKey(0)
     return templateCourtImg, players_position_of_frames
 
 
@@ -488,7 +501,7 @@ def estimateCalibHM(heatmaps, npImg, fieldPoints2d, oriHeight, oriWidth, visuali
 
         # cv2.waitKey(1)
 
-    return calib, M, is_leftfield, result
+    return calib, M, is_leftfield, result, npImg
 
 
 def checkProjection(calib, imgWidth, imgHeight):
@@ -568,14 +581,19 @@ if __name__ == "__main__":
                                      file_name[:-4] + '_board.mp4')
     output_homography_path = os.path.join(RESULT_DIR, HOMOGRAPHY_DIR,
                                           file_name[:-4] + '_homography.mp4')
+    output_original_path = os.path.join(RESULT_DIR, ORIGINAL_DIR,
+                                        file_name[:-4] + '_original.mp4')
 
     # Extract the directory path, and create it if necessary
     board_dir_path = os.path.dirname(output_board_path)
     homography_dir_path = os.path.dirname(output_homography_path)
+    original_dir_path = os.path.dirname(output_original_path)
     if not os.path.exists(board_dir_path):
         os.makedirs(board_dir_path)
     if not os.path.exists(homography_dir_path):
         os.makedirs(homography_dir_path)
+    if not os.path.exists(original_dir_path):
+        os.makedirs(original_dir_path)
 
     # Information of the video
     vidcap = cv2.VideoCapture(input_video_path)
@@ -583,6 +601,8 @@ if __name__ == "__main__":
                                 10, (740, 415))
     homo_out = cv2.VideoWriter(output_homography_path, cv2.VideoWriter_fourcc('m', 'p', '4', 'v'),
                                10, (560, 300))
+    original_out = cv2.VideoWriter(output_original_path, cv2.VideoWriter_fourcc('m', 'p', '4', 'v'),
+                                   10, (960, 540))
     video_length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     success, oriImg = vidcap.read()
 
@@ -622,9 +642,9 @@ if __name__ == "__main__":
                                             player_xy[1] * y_gain])
         # draw points on the calibration map
         is_leftfield = True
-        calib, M, is_leftfield, result = estimateCalib(model, device, fieldPoints2d, oriImg,
-                                                       True, players_position, labels,
-                                                       is_leftfield)
+        calib, M, is_leftfield, result, originalImg = estimateCalib(model, device, fieldPoints2d, oriImg,
+                                                                    True, players_position, labels,
+                                                                    is_leftfield)
 
         # Store n frames of players data, and thus will have a motion effect
         labels_of_frames += labels
@@ -650,12 +670,15 @@ if __name__ == "__main__":
         # Output and save the result
         board_out.write(BirdEyeCourtImg)
         homo_out.write(result)
+        original_out.write(originalImg)
 
     board_out.release()
     homo_out.release()
+    original_out.release()
 
     elapsed_time = time.time() - start_time
     print("Result: ")
     print("   board saved in:      ", output_board_path)
     print("   homography saved in: ", output_homography_path)
+    print("   original saved in:   ", output_original_path)
     print(f"Run time: {elapsed_time} seconds")
