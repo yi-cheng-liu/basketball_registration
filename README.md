@@ -68,7 +68,7 @@ The self-annotated dataset is opensourced in [Roboflow](https://universe.roboflo
 
 Original           |  Homography           |  Board
 :-----------------:|:---------------------:|:---------------------:
-![Original](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/homographies/demo_original.mp4)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/homographies/demo_homography.mp4)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/boards/demo_board.mp4)
+![Original](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_original.gif)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_homography.gif)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_board.gif)
 
 
 
