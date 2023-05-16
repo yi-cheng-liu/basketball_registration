@@ -561,7 +561,7 @@ if __name__ == "__main__":
         description="Estimate the homography of a sport field")
     parser.add_argument("--modelPath", default='models/model_challenge.pth',
                         help="Model path")
-    parser.add_argument("--inputPath", default='input/video/demo.mp4',
+    parser.add_argument("--inputPath", default='input/demo.mp4',
                         help="Input video path")
     parser.add_argument("--weightPath", default='yolov5/runs/train/exp2/weights/best.pt',
                         help="Weight path")
