@@ -1,175 +1,124 @@
-# basketball_registration
-#  SO-SLAM
-
+# Player Tracking in Bird-Eye Diagram Through Basketball Video
 
 <p align="center">
   <img src="https://github.com/MRHan-426/SOSLAM/blob/master/.assets/3%2000_00_00-00_00_30.gif" alt="gif">
 </p>
      
-![build passing](https://img.shields.io/badge/build-passing-brightgreen)
-[![License](https://img.shields.io/github/license/MRHan-426/SOSLAM)](./LICENSE.txt)
-![Primary language](https://img.shields.io/github/languages/top/MRHan-426/SOSLAM)
-![ROB530](https://img.shields.io/badge/ROB530-group6-orange)
+[![License](https://img.shields.io/github/license/yi-cheng-liu/basketball_registration)](./LICENSE.txt)
+![Primary language](https://img.shields.io/github/languages/top/yi-cheng-liu/basketball_registration)
 
 
-This is Team 6's final project git repository for ROB530: Mobile Robotics. 
+The title of our project is **Player Tracking in Bird-Eye Diagram Through Basketball Video**
 
-The title of our project is **Implementation and Evaluation of Semantic-Object SLAM Algorithm**
+In the sport of basketball, analyzing gameplay and opposing team strategies can be challenging due to tilted camera angles in footage. Instant playbacks offer coaches a better perspective, enabling them to assess match dynamics, make real-time adaptations, and analyze games more effectively. This enhances decision-making, team success, and fan engagement. **YOLOv5**, a popular multi-object detection model, along with robust court mapping with **ResNet18**, plays a crucial role in accurately identifying players and positioning them on the detected court.
 
-The team members include: Ziqi Han, Zhewei Ye, Tien-Li Lin, Yi-Cheng Liu, Shubh Agrawal.
+**Related Paper:**
 
-**Related Paper:**  [RA-L&ICRA 2022]
-
-+ Liao Z, Hu Y, Zhang J, et al. So-slam: Semantic object slam with scale proportional and symmetrical texture constraints[J]. IEEE Robotics and Automation Letters, 2022, 7(2): 4008-4015. [**[PDF]**](https://arxiv.org/abs/2109.04884)
++ Maglo, Adrien, Astrid Orcesi, and Quoc-Cuong Pham. "KaliCalib: A Framework for Basketball Court Registration." Proceedings of the 5th International ACM Workshop on Multimedia Content Analysis in Sports. 2022.[**[PDF]**](https://arxiv.org/abs/2209.07795)
 
 ---
 
-## 📚 1. Prerequisites
+## 📚 1. Installation
 
-
-```shell
-sudo apt-get install libglew-dev
-sudo apt-get install libeigen3-dev
-sudo apt-get install libtbb-dev
-sudo apt-get install libmetis-dev
-sudo apt-get install libpugixml-dev
-sudo apt-get install libpcl-dev
+Create a virtual environment:
+```
+virtualenv venv
+source venv/bin/activate
 ```
 
-
-```shell
-cmake 3.26.0
-libboost 1.71.0  # make sure to compile C++ version from source code.
-Pangolin 0.8.0
-OpenCV 4.7.0
+Install the dependancies:
+```
+pip install -r requirements.txt
 ```
 
+## ⚙️ 2. Run the program
 
-
-## ⚙️ 2. Compile GTSAM
-
-**Note that higher version may bring unexpected errors, we do not test other version so far.**
-
-```shell
-git clone --branch 4.1.1 https://github.com/borglab/gtsam.git
+Default run
+```
+python bird_eye_video.py
 ```
 
-Modify Eigen cmake config file: cmake/HandleEigen.cmake
-
-```shell
-set(GTSAM_USE_SYSTEM_EIGEN ON)
+#### Add arguments
+Change model
 ```
-
-Then:
-
-```shell
-mkdir build && cd build
-cmake ..
-make check
-sudo make install
+python bird_eye_video.py --modelPath models/model_challenge.pth
+```
+Change input video
+```
+python bird_eye_video.py --inputPath input/demo.mp4
+```
+Change weight
+```
+python bird_eye_video.py --weightPath yolov5/runs/train/exp2/weights/best.pt
+```
+Change floortexture
+```
+python bird_eye_video.py --floorTexturePath input/floor_texture/concrete.jpg
 ```
 
 
 
 
-## 🛠️ 3. Compile our repo
+## 🛠️ 3. Dataset
 
-Branch Master contains point cloud visualization, so you have some more prerequisites.
+The dataset used in this study includes bounding box locations of players and referees, as well as court vertex locations. Due to challenges in collecting data from actual NBA games, data was gathered from NBA 2k19, ensuring controlled scenes with visible sidelines. This dataset improves court detection, player tracking, and model generalization.
 
-```shell
-git clone --branch master https://github.com/MRHan-426/SOSLAM.git
-```
-
-Branch 0.0.1 doesnot contain point cloud visualization, so you don't have to compile PCL, VTK.
-
-```shell
-git clone --branch 0.0.1 https://github.com/MRHan-426/SOSLAM.git
-```
-
-Then:
-
-```shell
-mkdir build
-cmake ..
-make
-```
+The self-annotated dataset is opensourced in [Roboflow](https://universe.roboflow.com/nba2kplayer/nba2k-player-model)
 
 
 
 
-## 🌟 4. Examples
+## 🌟 4. Results
 
 
 
 
 
-## 🎬 5. Videos and Documentation
+## 🎬 5. Documentation
 
-+ Our project presentation video is on [**[YouTube]**](https://youtu.be/_yUy5nOtfMM).
-
-
-
-
-+ Project Document: [**[PDF]**](TODO)
++ Project Document: [**[PDF]**](https://drive.google.com/file/d/1GAQ3sh8x2o-xqoOj1Emo5974rCg2dLBc/view?usp=share_link)
 
 
 
+## 🏅 6. Reference
 
-## 📝 6. Note
+[1] P. Kaarthick, “An automated player detection and tracking in basketball game,” Computers, Materials Continua, vol. 58, pp. 625–639, 01 2019.
 
-+ If you want to use it in your work or with other datasets, you should prepare the dataset containing:
+[2] D. Farin, S. Krabbe, P. With, and W. Effelsberg, “Robust camera calibration for sport videos using court models,” vol. 5307, 01 2004, pp. 80–91.
 
-  - RGB image
-  - Label xml (contain "objectKey" key to store the data association information)
-  - Odom txt
-  - Depth image (if you do not need point cloud visualization, just ignore)
-  - Camera intrinsic txt
+[3] W.-L. Lu, “Learning to track and identify players from broadcast sports videos,” Ph.D. dissertation, University of British Columbia, 2011. [**Link**](https://open.library.ubc.ca/collections/ubctheses/24/items/1.0052129)
 
-  Be aware that you should rename your images and xmls as number 1,2,3,...
+[4] G. Jocher, “YOLOv5 by Ultralytics,” May 2020. [**Link**](https://github.com/ultralytics/yolov5)
 
-  Be aware that RGB, Depth, Label, Odom must match.
+[5] A. Maglo, A. Orcesi, and Q.-C. Pham, “Kalicalib: A framework for basketball court registration,” in Proceedings of the 5th International ACM Workshop on Multimedia Content Analysis in Sports, 2022, pp. 111–116. 
 
-+ This is an incomplete version of our project. 
-    - We have a lot of experiments to be done.
-    - We have not achieved real-time.
+[6] M. Martinez, C. Sitawarin, K. Finch, L. Meincke, A. Yablonski, and A. Kornhauser, “Beyond grand theft auto v for training, testing and enhancing deep learning in self driving cars,” arXiv preprint arXiv:1712.01397, 2017.
+
+[7] P. Dwivedi. (2019) March madness — analyze video to detect players, teams, and who attempted the basket. [**Link**](https://towardsdatascience.com/march-madness-analyze-video-to-detect-players-teams-and-who-attempted-the-basket-8cad67745b88)
+
+[8] Stephan. (2019) Open source sports video analysis using machine learning. [**Link**](https://dev.to/stephan007/open-source-sports-video-analysis-using-maching-learning-2ag4)
 
 
 
 
-## 🏅 7. Acknowledgement
 
-Thanks for the great work: 
-
-+ [**SO-SLAM**](https://github.com/XunshanMan/SoSLAM)
-+ [**GTSAM**](https://github.com/borglab/gtsam)
-+ [**Quadric-SLAM**](https://github.com/qcr/quadricslam)
-+ [**EAO-SLAM**](https://github.com/yanmin-wu/EAO-SLAM) 
-+ [**ORB-SLAM2**](https://github.com/raulmur/ORB_SLAM2)
-+ [**YOLO-v8**](https://github.com/ultralytics/ultralytics)
-
-
-
-## 📫 8. Contact
+## 📫 7. Contact
 
 + Tien-Li Lin, Email: tienli@umich.edu
 + Yi-Cheng Liu, Email: liuyiche@umich.edu
-
-
++ Wei-Cheng Chiang, Email: imarthur@umich.edu
 
 
 
 **Please cite the author's paper if you use the code in your work.**
 
 ```
-@article{liao2022so,
-  title={So-slam: Semantic object slam with scale proportional and symmetrical texture constraints},
-  author={Liao, Ziwei and Hu, Yutong and Zhang, Jiadong and Qi, Xianyu and Zhang, Xiaoyu and Wang, Wei},
-  journal={IEEE Robotics and Automation Letters},
-  volume={7},
-  number={2},
-  pages={4008--4015},
-  year={2022},
-  publisher={IEEE}
+@inproceedings{maglo2022kalicalib,
+  title={KaliCalib: A Framework for Basketball Court Registration},
+  author={Maglo, Adrien and Orcesi, Astrid and Pham, Quoc-Cuong},
+  booktitle={Proceedings of the 5th International ACM Workshop on Multimedia Content Analysis in Sports},
+  pages={111--116},
+  year={2022}
 }
 ```
 
