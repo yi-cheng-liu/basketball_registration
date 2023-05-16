@@ -8,6 +8,10 @@ The title of our project is **Player Tracking in Bird-Eye Diagram Through Basket
 
 In the sport of basketball, analyzing gameplay and opposing team strategies can be challenging due to tilted camera angles in footage. Instant playbacks offer coaches a better perspective, enabling them to assess match dynamics, make real-time adaptations, and analyze games more effectively. This enhances decision-making, team success, and fan engagement. **YOLOv5**, a popular multi-object detection model, along with robust court mapping with **ResNet18**, plays a crucial role in accurately identifying players and positioning them on the detected court.
 
+Original           |  Board
+:-----------------:|:---------------------:
+![Original](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/demo_original.gif)  | ![Board](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/demo_board.gif)
+
 **Related Paper:**
 
 + Maglo, Adrien, Astrid Orcesi, and Quoc-Cuong Pham. "KaliCalib: A Framework for Basketball Court Registration." Proceedings of the 5th International ACM Workshop on Multimedia Content Analysis in Sports. 2022.[**[PDF]**](https://arxiv.org/abs/2209.07795)
@@ -66,11 +70,18 @@ The self-annotated dataset is opensourced in [Roboflow](https://universe.roboflo
 
 ## 🌟 4. Results
 
+### NBA 2K19 data
+
 Original           |  Homography           |  Board
 :-----------------:|:---------------------:|:---------------------:
-![Original](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_original.gif)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_homography.gif)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/tree/main/.assset/demo_board.gif)
+![Original](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/demo_original.gif)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/demo_homography.gif)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/demo_board.gif)
+
+### Real Game data
 
 
+Original           |  Homography           |  Board
+:-----------------:|:---------------------:|:---------------------:
+![Original](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/real_demo_original.gif)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/real_demo_homography.gif)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/blob/main/.assets/real_demo_board.gif)
 
 ## 🎬 5. Documentation
 
