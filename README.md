@@ -1,8 +1,4 @@
 # Player Tracking in Bird-Eye Diagram Through Basketball Video
-
-<p align="center">
-  <img src="https://github.com/MRHan-426/SOSLAM/blob/master/.assets/3%2000_00_00-00_00_30.gif" alt="gif">
-</p>
      
 [![License](https://img.shields.io/github/license/yi-cheng-liu/basketball_registration)](./LICENSE.txt)
 ![Primary language](https://img.shields.io/github/languages/top/yi-cheng-liu/basketball_registration)
@@ -70,7 +66,9 @@ The self-annotated dataset is opensourced in [Roboflow](https://universe.roboflo
 
 ## 🌟 4. Results
 
-
+Original           |  Homography           |  Board
+:-----------------:|:---------------------:|:---------------------:
+![Original](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/homographies/demo_original.mp4)  |  ![Homography](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/homographies/demo_homography.mp4)  |  ![Board](https://github.com/yi-cheng-liu/basketball_registration/tree/main/results/boards/demo_board.mp4)
 
 
 
