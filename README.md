@@ -87,7 +87,7 @@ Original           |  Homography           |  Board
 
 + Project Document: [**[PDF]**](https://drive.google.com/file/d/1GAQ3sh8x2o-xqoOj1Emo5974rCg2dLBc/view?usp=share_link)
 
-
++ Project Powerpoint: [**[PowerPoint]**](https://docs.google.com/presentation/d/17kGtxCoQZnYYDWH4voLEgzEzGQEgIRQp/edit?usp=share_link&ouid=102685575310417699521&rtpof=true&sd=true)
 
 ## 🏅 6. Reference
 
